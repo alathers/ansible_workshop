@@ -42,7 +42,7 @@
       name: "check current agent version"
       win_shell: .\oneagentctl --version
       args:
-        chdir: C:\Program Files (x86)\dynatrace\oneagent\agent\tools\
+        chdir: C:\Program Files\dynatrace\oneagent\agent\tools\
       register: current_version
       when: installed.exists == True
       changed_when: False
