@@ -10,6 +10,13 @@
   hosts: "{{ hosts_group }}"
   name: "dynatrace oneagent install on windows"
   tasks:
+    # Check the OS architecture bitness
+    -
+      name: "check OS architecture"
+      debug:
+        var: ansible_architecture
+      when: ansible_architecture is defined
+    # Check that Temp directory exists
     -
       name: "check that Temp directory exists"
       win_file:
@@ -42,7 +49,7 @@
       name: "check current agent version"
       win_shell: .\oneagentctl --version
       args:
-        chdir: C:\Program Files\dynatrace\oneagent\agent\tools\
+        chdir: C:\Program Files (x86)\dynatrace\oneagent\agent\tools\
       register: current_version
       when: installed.exists == True
       changed_when: False
@@ -115,6 +122,15 @@
       args:
         chdir: C:\Program Files (x86)\dynatrace\oneagent\agent\tools\
       register: current_host_group
+      when: ansible_architecture == "64-bit"
+      changed_when: False
+    -
+      name: "get current host group setting"
+      win_shell: .\oneagentctl --get-host-group
+      args:
+        chdir: C:\Program Files\dynatrace\oneagent\agent\tools\
+      register: current_host_group
+      when: ansible_architecture == "32-bit"
       changed_when: False
     -
       name: "set current host group fact (dt_current_host_group)"
@@ -128,5 +144,14 @@
         .\oneagentctl --set-host-group={{ dt_host_group }}
         net start "Dynatrace OneAgent"
       args:
+        chdir: C:\Program Files\dynatrace\oneagent\agent\tools\
+      when: dt_current_host_group != dt_host_group and dt_host_group is defined and dt_current_host_group is defined and ansible_architecture == "32-bit"
+    -
+      name: "update/correct host group setting if not correct"
+      win_shell: |
+        net stop "Dynatrace OneAgent"
+        .\oneagentctl --set-host-group={{ dt_host_group }}
+        net start "Dynatrace OneAgent"
+      args:
         chdir: C:\Program Files (x86)\dynatrace\oneagent\agent\tools\
-      when: dt_current_host_group != dt_host_group and dt_host_group is defined and dt_current_host_group is defined
+      when: dt_current_host_group != dt_host_group and dt_host_group is defined and dt_current_host_group is defined and ansible_architecture == "64-bit"
